@@ -12,6 +12,8 @@ from model import DM2FNet, DM2FNet_woPhy
 from datasets import SotsDataset, OHazeDataset
 from torch.utils.data import DataLoader
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
+from skimage.color import deltaE_ciede2000, rgb2lab
+
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -19,17 +21,17 @@ torch.manual_seed(2018)
 torch.cuda.set_device(0)
 
 ckpt_path = './ckpt'
-# exp_name = 'RESIDE_ITS'
-exp_name = 'O-Haze'
+exp_name = 'RESIDE_ITS'
+# exp_name = 'O-Haze'
 
 args = {
-    # 'snapshot': 'iter_40000_loss_0.01230_lr_0.000000',
-    'snapshot': 'iter_19000_loss_0.04261_lr_0.000014',
+    'snapshot': 'iter_40000_loss_0.01487_lr_0.000000',
+    # 'snapshot': 'iter_20000_loss_0.03625_lr_0.000000',
 }
 
 to_test = {
-    # 'SOTS': TEST_SOTS_ROOT,
-    'O-Haze': OHAZE_ROOT,
+    'SOTS': TEST_SOTS_ROOT,
+    # 'O-Haze': OHAZE_ROOT,
 }
 
 to_pil = transforms.ToPILImage()
@@ -53,12 +55,12 @@ def main():
 
             if len(args['snapshot']) > 0:
                 print('load snapshot \'%s\' for testing' % args['snapshot'])
-                net.load_state_dict(torch.load(os.path.join(ckpt_path, exp_name, args['snapshot'] + '.pth')))
+                net.load_state_dict(torch.load(os.path.join(ckpt_path, exp_name, args['snapshot'] + '.pth'), map_location="cuda:0"))
 
             net.eval()
             dataloader = DataLoader(dataset, batch_size=1)
 
-            psnrs, ssims = [], []
+            psnrs, ssims, ciede2000s = [], [], []
             loss_record = AvgMeter()
 
             for idx, data in enumerate(dataloader):
@@ -85,17 +87,23 @@ def main():
                     psnr = peak_signal_noise_ratio(gt, r)
                     psnrs.append(psnr)
                     ssim = structural_similarity(gt, r, data_range=1, multichannel=True,
-                                                 gaussian_weights=True, sigma=1.5, use_sample_covariance=False)
+                                                 gaussian_weights=True, sigma=1.5, use_sample_covariance=False, channel_axis=-1)
                     ssims.append(ssim)
-                    print('predicting for {} ({}/{}) [{}]: PSNR {:.4f}, SSIM {:.4f}'
-                          .format(name, idx + 1, len(dataloader), fs[i], psnr, ssim))
 
-                for r, f in zip(res.cpu(), fs):
-                    to_pil(r).save(
-                        os.path.join(ckpt_path, exp_name,
-                                     '(%s) %s_%s' % (exp_name, name, args['snapshot']), '%s.png' % f))
+                    r_lab = rgb2lab(r)
+                    gt_lab = rgb2lab(gt)
 
-            print(f"[{name}] L1: {loss_record.avg:.6f}, PSNR: {np.mean(psnrs):.6f}, SSIM: {np.mean(ssims):.6f}")
+                    ciede2000 = deltaE_ciede2000(gt_lab, r_lab).mean()
+                    ciede2000s.append(ciede2000)
+
+                    print('predicting for {} ({}/{}) [{}]: PSNR {:.4f}, SSIM {:.4f}, CIEDE2000 {:.4f}'.format(name, idx + 1, len(dataloader), fs[i], psnr, ssim, ciede2000))
+
+            for r, f in zip(res.cpu(), fs):
+                to_pil(r).save(
+                    os.path.join(ckpt_path, exp_name,
+                                '(%s) %s_%s' % (exp_name, name, args['snapshot']), '%s.png' % f))
+
+            print(f"[{name}] L1: {loss_record.avg:.6f}, PSNR: {np.mean(psnrs):.6f}, SSIM: {np.mean(ssims):.6f}, CIEDE2000: {np.mean(ciede2000s):.6f}")
 
 
 if __name__ == '__main__':

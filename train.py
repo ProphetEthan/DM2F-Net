@@ -21,7 +21,7 @@ from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a DM2FNet')
     parser.add_argument(
-        '--gpus', type=str, default='0', help='gpus to use ')
+        '--gpus', type=str, default='1', help='gpus to use ')
     parser.add_argument('--ckpt-path', default='./ckpt', help='checkpoint path')
     parser.add_argument(
         '--exp-name',
@@ -35,7 +35,7 @@ def parse_args():
 cfgs = {
     'use_physical': True,
     'iter_num': 40000,
-    'train_batch_size': 16,
+    'train_batch_size': 8,
     'last_iter': 0,
     'lr': 5e-4,
     'lr_decay': 0.9,
@@ -182,10 +182,13 @@ def validate(net, curr_iter, optimizer):
 
 if __name__ == '__main__':
     args = parse_args()
+    num_devices = torch.cuda.device_count()
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
+
+    print(num_devices)
+    # os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
     cudnn.benchmark = True
-    torch.cuda.set_device(int(args.gpus))
+    torch.cuda.set_device(2)
 
     train_dataset = ItsDataset(TRAIN_ITS_ROOT, True, cfgs['crop_size'])
     train_loader = DataLoader(train_dataset, batch_size=cfgs['train_batch_size'], num_workers=4,

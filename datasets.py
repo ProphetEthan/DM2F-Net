@@ -24,6 +24,7 @@ def make_dataset(root):
 def make_dataset_its(root):
     items = []
     for img_name in os.listdir(os.path.join(root, 'hazy')):
+        print(img_name)
         idx0, idx1, ato = os.path.splitext(img_name)[0].split('_')
         gt = os.path.join(root, 'clear', idx0 + '.png')
         trans = os.path.join(root, 'trans', idx0 + '_' + idx1 + '.png')
