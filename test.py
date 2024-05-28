@@ -6,32 +6,33 @@ import torch
 from torch import nn
 from torchvision import transforms
 
-from tools.config import TEST_SOTS_ROOT, OHAZE_ROOT
+from tools.config import TEST_SOTS_ROOT, OHAZE_ROOT, TEST_Haze_ROOT
 from tools.utils import AvgMeter, check_mkdir, sliding_forward
 from model import DM2FNet, DM2FNet_woPhy
-from datasets import SotsDataset, OHazeDataset
+from datasets import SotsDataset, OHazeDataset, HazeDataset
 from torch.utils.data import DataLoader
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.color import deltaE_ciede2000, rgb2lab
 
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 torch.manual_seed(2018)
 torch.cuda.set_device(0)
 
 ckpt_path = './ckpt'
-exp_name = 'RESIDE_ITS'
-# exp_name = 'O-Haze'
+# exp_name = 'RESIDE_ITS'
+exp_name = 'O-Haze'
+# exp_name = 'HazeRD'
 
 args = {
-    'snapshot': 'iter_40000_loss_0.01487_lr_0.000000',
-    # 'snapshot': 'iter_20000_loss_0.03625_lr_0.000000',
+    'snapshot': 'iter_20000_loss_0.06215_lr_0.000000',# O-Haze
+    # 'snapshot': 'iter_40000_loss_0.01487_lr_0.000000', 
 }
 
 to_test = {
-    'SOTS': TEST_SOTS_ROOT,
-    # 'O-Haze': OHAZE_ROOT,
+    # 'HazeRD':TEST_Haze_ROOT,
+    'O-Haze': OHAZE_ROOT,
 }
 
 to_pil = transforms.ToPILImage()
@@ -42,9 +43,9 @@ def main():
         criterion = nn.L1Loss().cuda()
 
         for name, root in to_test.items():
-            if 'SOTS' in name:
+            if 'HazeRD' in name:
                 net = DM2FNet().cuda()
-                dataset = SotsDataset(root)
+                dataset = HazeDataset(root)
             elif 'O-Haze' in name:
                 net = DM2FNet_woPhy().cuda()
                 dataset = OHazeDataset(root, 'test')
@@ -72,7 +73,7 @@ def main():
                                          '(%s) %s_%s' % (exp_name, name, args['snapshot'])))
 
                 haze = haze.cuda()
-
+                print(haze.shape)
                 if 'O-Haze' in name:
                     res = sliding_forward(net, haze).detach()
                 else:
@@ -98,10 +99,10 @@ def main():
 
                     print('predicting for {} ({}/{}) [{}]: PSNR {:.4f}, SSIM {:.4f}, CIEDE2000 {:.4f}'.format(name, idx + 1, len(dataloader), fs[i], psnr, ssim, ciede2000))
 
-            for r, f in zip(res.cpu(), fs):
-                to_pil(r).save(
-                    os.path.join(ckpt_path, exp_name,
-                                '(%s) %s_%s' % (exp_name, name, args['snapshot']), '%s.png' % f))
+                for r, f in zip(res.cpu(), fs):
+                    to_pil(r).save(
+                        os.path.join(ckpt_path, exp_name,
+                                    '(%s) %s_%s' % (exp_name, name, args['snapshot']), '%s.png' % f))
 
             print(f"[{name}] L1: {loss_record.avg:.6f}, PSNR: {np.mean(psnrs):.6f}, SSIM: {np.mean(ssims):.6f}, CIEDE2000: {np.mean(ciede2000s):.6f}")
 

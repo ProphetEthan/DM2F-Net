@@ -14,12 +14,17 @@ from torchvision.transforms import ToTensor
 to_tensor = ToTensor()
 
 
+def make_haze_dataset(root):
+    return [(os.path.join(root, 'hazy', img_name),
+            #  os.path.join(root, 'trans', img_name),
+             os.path.join(root, 'gt', img_name))
+            for img_name in os.listdir(os.path.join(root, 'hazy'))]
+
 def make_dataset(root):
     return [(os.path.join(root, 'hazy', img_name),
              os.path.join(root, 'trans', img_name),
              os.path.join(root, 'gt', img_name))
             for img_name in os.listdir(os.path.join(root, 'hazy'))]
-
 
 def make_dataset_its(root):
     items = []
@@ -228,7 +233,6 @@ class OtsDataset(data.Dataset):
     def __len__(self):
         return len(self.imgs)
 
-
 class SotsDataset(data.Dataset):
     def __init__(self, root, mode=None):
         self.root = root
@@ -244,6 +248,31 @@ class SotsDataset(data.Dataset):
 
         idx0 = name.split('_')[0]
         gt = Image.open(os.path.join(self.root, 'gt', idx0 + '.png')).convert('RGB')
+        gt = to_tensor(gt)
+        if gt.shape != haze.shape:
+            # crop the indoor images
+            gt = gt[:, 10: 470, 10: 630]
+
+        return haze, gt, name
+
+    def __len__(self):
+        return len(self.imgs)
+
+class HazeDataset(data.Dataset):
+    def __init__(self, root, mode=None):
+        self.root = root
+        self.imgs = make_haze_dataset(root)
+        self.mode = mode
+
+    def __getitem__(self, index):
+        haze_path, gt_path = self.imgs[index]
+        name = os.path.splitext(os.path.split(haze_path)[1])[0]
+
+        haze = Image.open(haze_path).convert('RGB')
+        haze = to_tensor(haze)
+
+        idx0 = name.split('_50')[0]
+        gt = Image.open(os.path.join(self.root, 'gt', idx0 + '_RGB.jpg')).convert('RGB')
         gt = to_tensor(gt)
         if gt.shape != haze.shape:
             # crop the indoor images

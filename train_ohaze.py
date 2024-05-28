@@ -111,7 +111,7 @@ def train(net, optimizer):
                 loss_x_j3 = criterion(x_j3, gt)
                 loss_x_j4 = criterion(x_j4, gt)
 
-                loss = loss_x_jf + loss_x_j1 + loss_x_j2 + loss_x_j3 + loss_x_j4
+                loss = loss_x_jf + loss_x_j1 + loss_x_j2 + loss_x_j3 + loss_x_j4 
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -127,7 +127,7 @@ def train(net, optimizer):
             loss_x_j2_record.update(loss_x_j2.item(), batch_size)
             loss_x_j3_record.update(loss_x_j3.item(), batch_size)
             loss_x_j4_record.update(loss_x_j4.item(), batch_size)
-
+    
             curr_iter += 1
 
             log = '[iter %d], [train loss %.5f], [loss_x_fusion %.5f], [loss_x_j1 %.5f], ' \

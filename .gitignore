@@ -1,5 +1,11 @@
 __pycache__/
 .ipynb_checkpoints/
 .idea
-ckpt
+ckpt/
+ckpt_d/
+ckpt_o/
 data
+checkpoints/
+models/
+output/
+output_o/

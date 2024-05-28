@@ -22,7 +22,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train a DM2FNet')
     parser.add_argument(
         '--gpus', type=str, default='1', help='gpus to use ')
-    parser.add_argument('--ckpt-path', default='./ckpt', help='checkpoint path')
+    parser.add_argument('--ckpt-path', default='./ckpt_d', help='checkpoint path')
     parser.add_argument(
         '--exp-name',
         default='RESIDE_ITS',
@@ -34,12 +34,12 @@ def parse_args():
 
 cfgs = {
     'use_physical': True,
-    'iter_num': 40000,
+    'iter_num':40000,
     'train_batch_size': 8,
     'last_iter': 0,
     'lr': 5e-4,
     'lr_decay': 0.9,
-    'weight_decay': 0,
+    'weight_decay': 0.00005,
     'momentum': 0.9,
     'snapshot': '',
     'val_freq': 5000,
